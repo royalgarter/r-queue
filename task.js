@@ -34,6 +34,14 @@ T._pull = (cli, q, isCircular=false, cb) => {
 T.pull = (cli, q, cb) => T._pull(cli, q, false, cb);
 T.cpull = (cli, q, cb) => T._pull(cli, q, true, cb);
 
+T.ppull = (cli, qs, cb) => {
+	let {queues, isArray} = enqueue(qs);
+	
+	async.eachSeries(queues, 
+		(q, next) => T.pull(cli, q, (e, r) => next(r||e)), 
+		e => (typeof e == 'object' && !(e instanceof Error) && !e.stack) ? cb(null, e) : cb(e) );
+}	
+
 T.lpull = (cli, q, t={times:30,interval:1e3}, cb) => async.retry(t, next => T.pull(cli, q, (e,r) => next(!r ? (e||'Q_EMPTY') : null, r) ), cb);
 
 T.fpull = (cli, q, ms=1e3, cb) => async.forever(next => T.pull(cli, q, (e,r) => r ? next(r) : setTimeout(next, ms)), r => cb(null, r));

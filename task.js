@@ -1,7 +1,9 @@
 const async = require('async');
 const md5 = require('crypto').createHash('md5');
 
-const T = { PREFIX: process.env.TASK_QUEUE_PREFIX || 'TSKQ' };
+const T = { 
+	PREFIX: process.env.TASK_QUEUE_PREFIX || 'TSKQ' 
+};
 
 const json = o => JSON.stringify(o);
 const ujoin = (...args) => args.join('_').toUpperCase();
@@ -23,14 +25,16 @@ T.push = (cli, qs, tsk, cb) => {
 	], next), (e, r) => cb(e, tsk._tid, isArray ? r : r[0])); 
 }
 
-T.pull = (cli, q, cb) => {
+T._pull = (cli, q, isCircular=false, cb) => {
 	async.waterfall([
-		next => cli.rpoplpush(sub('wait', q), sub('work', q), next),
-		(tid, next) => cli.get(tid, (e, r) => next(e, JSON.parse(r), tid))
+		next => cli.rpoplpush(sub('wait', q), sub(isCircular?'wait':'work', q), next),
+		(tid, next) => cli.get(tid, (e, r) => next(e, JSON.parse(r), tid)),
 	], cb); 
 }
+T.pull = (cli, q, cb) => T._pull(cli, q, false, cb);
+T.cpull = (cli, q, cb) => T._pull(cli, q, true, cb);
 
-T.lpull = (cli, q, t={times: 30,interval: 1e3}, cb) => async.retry(t, next => T.pull(cli, q, (e,r) => next(!r ? (e||'Q_EMPTY') : null, r) ), cb);
+T.lpull = (cli, q, t={times:30,interval:1e3}, cb) => async.retry(t, next => T.pull(cli, q, (e,r) => next(!r ? (e||'Q_EMPTY') : null, r) ), cb);
 
 T.fpull = (cli, q, ms=1e3, cb) => async.forever(next => T.pull(cli, q, (e,r) => r ? next(r) : setTimeout(next, ms)), r => cb(null, r));
 

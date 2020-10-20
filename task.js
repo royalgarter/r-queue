@@ -26,7 +26,7 @@ T.push = (cli, qs, tsk, cb) => {
 T.pull = (cli, q, cb) => {
 	async.waterfall([
 		next => cli.rpoplpush(sub('wait', q), sub('work', q), next),
-		(tid, next) => cli.get(tid, (e, r) => next(e, r, tid))
+		(tid, next) => cli.get(tid, (e, r) => next(e, JSON.parse(r), tid))
 	], cb); 
 }
 

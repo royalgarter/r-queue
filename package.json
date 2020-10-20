@@ -1,0 +1,25 @@
+{
+  "name": "r-queue",
+  "version": "1.0.0",
+  "description": "Simpl Redis Task Queue",
+  "main": "task.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/royalgarter/r-queue.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/royalgarter/r-queue/issues"
+  },
+  "homepage": "https://github.com/royalgarter/r-queue#readme",
+  "dependencies": {
+    "async": "^3.2.0"
+  },
+  "_id": "r-queue@1.0.0",
+  "_from": "r-queue@*"
+}

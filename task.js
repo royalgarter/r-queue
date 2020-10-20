@@ -6,6 +6,7 @@ const T = {
 };
 
 const json = o => JSON.stringify(o);
+const parse = str => { try { return typeof str == 'string' ? JSON.parse(str) : str} catch(ex) {return null} };
 const ujoin = (...args) => args.join('_').toUpperCase();
 const sub = (type, name) => ujoin(T.PREFIX, type, name);
 const gid = (str, salt) => ujoin(T.PREFIX, 'ID', md5.update(str+(salt||'')).digest('hex'));
@@ -28,7 +29,7 @@ T.push = (cli, qs, tsk, cb) => {
 T._pull = (cli, q, isCircular=false, cb) => {
 	async.waterfall([
 		next => cli.rpoplpush(sub('wait', q), sub(isCircular?'wait':'work', q), next),
-		(tid, next) => cli.get(tid, (e, r) => next(e, JSON.parse(r), tid)),
+		(tid, next) => !tid ? next() : cli.get(tid, (e, r) => next(e, parse(r), tid)),
 	], cb); 
 }
 T.pull = (cli, q, cb) => T._pull(cli, q, false, cb);

@@ -30,14 +30,9 @@ T.pull = (cli, q, cb) => {
 	], cb); 
 }
 
-T.lpull = (cli, q, otps={times: 30, interval: 1e3}, cb) => {
-	async.retry(otps, next => T.pull(cli, q, (e,r) => next(!r ? (e || 'Q_EMPTY') : null, r) ), cb);
-}
+T.lpull = (cli, q, t={times: 30,interval: 1e3}, cb) => async.retry(t, next => T.pull(cli, q, (e,r) => next(!r ? (e||'Q_EMPTY') : null, r) ), cb);
 
-T.fpull = (cli, q, ms=1e3, cb) => {
-	let res = null;
-	async.forever(next => T.pull(cli, q, (e,r) => r ? next(r) : setTimeout(next, ms)), r => cb(null, r));
-}
+T.fpull = (cli, q, ms=1e3, cb) => async.forever(next => T.pull(cli, q, (e,r) => r ? next(r) : setTimeout(next, ms)), r => cb(null, r));
 
 T.len = (cli, qs, cb) => {
 	let {queues, isArray} = enqueue(qs);
@@ -84,23 +79,3 @@ T.wipe = (cli, wildcard, cb) => {
 }
 
 module.exports = exports = T;
-
-if (process.env.TEST_TASK) {
-	const __config = require('../config');
-	const cli = require(__config.baseDir + 'services/redis').redisMain;
-	const q = 'TESTQ'
-
-	async.waterfall([
-		next => T.push(cli, q, {data: 1}, (e, r) => console.log('push', e, r) & next(e,r)),
-		(id, next) => T.len(cli, q, (e, r) => console.log('len', e, r) & next(e,id)),
-		// (id, next) => T.pull(cli, q, (e, r) => console.log('pull', e, r) &  next(e,id)),
-		(id, next) => T.fpull(cli, q, 1e3, (e, r) => console.log('fpull', e, r) &  next(e,id)),
-		// (id, next) => T.lpull(cli, q, {times: 30, interval: 200}, (e, r) => console.log('lpull', e, r) &  next(e,id)),
-		(id, next) => T.len(cli, q, (e, r) => console.log('len', e, r) & next(e,id)),
-		(id, next) => T.reset(cli, q, id, (e, r) => console.log('reset', e, r) & next(e,id)),
-		(id, next) => T.len(cli, q, (e, r) => console.log('len', e, r) & next(e,id)),
-		// (id, next) => T.del(cli, q, id, (e, r) => console.log('del', e, r) & next(e,id)),
-		(id, next) => T.flush(cli, q, (e, r) => console.log('flush', e, r) & next(e,id)),
-		(id, next) => T.len(cli, q, (e, r) => console.log('len', e, r) & next(e,id)),
-	])
-}

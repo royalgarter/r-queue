@@ -1,5 +1,4 @@
 const async = require('async');
-const md5 = require('crypto').createHash('md5');
 
 const T = { 
 	PREFIX: process.env.TASK_QUEUE_PREFIX || 'TSKQ' 
@@ -9,7 +8,7 @@ const json = o => JSON.stringify(o);
 const parse = str => { try { return typeof str == 'string' ? JSON.parse(str) : str} catch(ex) {return null} };
 const ujoin = (...args) => args.join('_').toUpperCase();
 const sub = (type, name) => ujoin(T.PREFIX, type, name);
-const gid = (str, salt) => ujoin(T.PREFIX, 'ID', md5.update(str+(salt||'')).digest('hex'));
+const gid = (str, salt) => ujoin(T.PREFIX, 'ID', require('crypto').createHash('md5').update(str+(salt||'')).digest('hex'));
 const enqueue = (queues) => Array.isArray(queues) ? {queues, isArray: true} : {queues: [queues], isArray: false};
 const wrap = o => {
 	if (typeof o != 'object'||o._tid||o._json) throw new TypeError('Task must be non-circular Object without (_tid, _json) key');

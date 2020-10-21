@@ -7,7 +7,7 @@ const T = {
 const json = o => JSON.stringify(o);
 const parse = str => { try { return typeof str == 'string' ? JSON.parse(str) : str} catch(ex) {return null} };
 const ujoin = (...args) => args.join('_').toUpperCase();
-const sub = (type, name) => ujoin(T.PREFIX, type, name);
+const sub = (type, name) => ujoin(T.PREFIX, 'Q', type, name);
 const gid = (str, salt) => ujoin(T.PREFIX, 'ID', require('crypto').createHash('md5').update(str+(salt||'')).digest('hex'));
 const enqueue = (queues) => Array.isArray(queues) ? {queues, isArray: true} : {queues: [queues], isArray: false};
 const wrap = o => {

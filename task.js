@@ -1,7 +1,8 @@
 const async = require('async');
 
 const T = { 
-	PREFIX: process.env.TASK_QUEUE_PREFIX || 'TSKQ' 
+	PREFIX: process.env.TASK_QUEUE_PREFIX || 'TSKQ',
+	TTL_SEC: 60*60*24*30, 
 };
 
 const json = o => JSON.stringify(o);
@@ -20,7 +21,7 @@ T.push = (cli, qs, tsk, cb) => {
 	tsk = wrap(tsk);
 
 	async.map(queues, (q, next) => async.parallel([
-		next => cli.set(tsk._tid, tsk._json, next),
+		next => cli.setex(tsk._tid, T.TTL_SEC, tsk._json, next),
 		next => cli.lpush(sub('wait', q), tsk._tid, next),
 	], next), (e, r) => cb(e, tsk._tid, isArray ? r : r[0])); 
 }

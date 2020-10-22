@@ -79,6 +79,21 @@ T.reset = (cli, qs, tid, cb) => {
 	], next), (e, r) => sure(cb)(e, isArray ? r : r[0]));
 }
 
+T.resetAll = (cli, qs, cb) => {
+	let {queues, isArray} = enqueue(qs);
+
+	async.map(queues, (q, next) => async.forever(
+		next => cli.rpoplpush(sub('work', q), sub('wait', q), (e, r) => next(r ? null : 'DONE') & console.log(e,r))
+	, e => next()), (e, r) => sure(cb)(e, isArray ? r : r[0]));
+}
+
+T.status = (cli, cb) => {
+	async.waterfall([
+		next => cli.keys(ujoin(T.PREFIX, 'Q','*'), next),
+		(keys, next) => keys.sort() & async.map(keys, (k, next) => cli.llen(k, (e, l) => next(e, {[k]: l})), next),
+	], cb);
+}
+
 T.flush = (cli, qs, cb) => {
 	let {queues, isArray} = enqueue(qs);
 	
@@ -89,7 +104,7 @@ T.flush = (cli, qs, cb) => {
 }
 
 T.wipe = (cli, wildcard, cb) => {
-	cli.eval(`'local keys = redis.call("keys", ARGV[1]); return #keys > 0 and redis.call("del", unpack(keys)) or 0' 0 prefix:*${T.PREFIX}*${wildcard}`, sure(cb));
+	cli.eval("for i, name in ipairs(redis.call('KEYS', ARGV[1])) do redis.call('DEL', name); end", 0, `prefix:*${T.PREFIX}*${wildcard}`, sure(cb));
 }
 
 module.exports = exports = T;

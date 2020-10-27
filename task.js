@@ -108,3 +108,30 @@ T.wipe = (cli, wildcard, cb) => {
 }
 
 module.exports = exports = T;
+
+try {
+	if (!~process.argv.indexOf('-e') && !~process.argv.indexOf('--execute')) return;
+
+	const { program } = require('commander');
+
+	program
+		.option('-e, --execute', 'Run as CLI-EXECUTE mode')
+		.option('-c, --cli <cmd>', 'Command to execute')
+		.option('-r, --redis <redis>', 'Redis connection string')
+		.option('-q, --queue <queue>', 'Queue name')
+		.option('-v, --var <var>', 'Rest variables according to command', (v, p) => p.concat([v]), [])
+	program.parse(process.argv);
+
+	if (!program.redis) return console.log('Redis is missing');
+	if (!program.cli) return console.log('Command is missing');
+
+	const redis = require('redis').createClient(program.redis);
+	const _output = cmd => cmd || ((e,r) => console.log('\n---\nCMD:', program.cli, '\nERR:', e, '\nRESULT:\n', r) & redis.quit());
+
+	const vars = [redis, _output(program.queue), ..._output(program.var), _output()];
+	console.log('VARS:', program.cli, vars.slice(1))
+	
+	return T[program.cli].apply(null, vars);
+} catch (ex) {
+	console.log('EXECUTE_CATCH:', ex);
+}

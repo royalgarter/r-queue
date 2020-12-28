@@ -2,11 +2,14 @@ const async = require('async');
 
 const T = { 
 	PREFIX: process.env.TASK_QUEUE_PREFIX || 'TSKQ',
-	TTL_SEC: 60*60*24*30, 
+	TTL_SEC: 60*60*24*30,
+	WAIT: 'WAIT',
+	WORK: 'WORK',
 };
 
 const json = o => JSON.stringify(o);
 const parse = str => { try { return typeof str == 'string' ? JSON.parse(str) : str} catch(ex) {return null} };
+const urepl = name => name.replace(new RegExp(`${T.PREFIX}_Q_(${T.WAIT}|${T.WORK})_`, 'gi'), '');
 const ujoin = (...args) => args.join('_').toUpperCase();
 const sub = (type, name) => ujoin(T.PREFIX, 'Q', type, name);
 const gid = (str, salt) => ujoin(T.PREFIX, 'ID', require('crypto').createHash('md5').update(str+(salt||'')).digest('hex'));
@@ -23,13 +26,13 @@ T.push = (cli, qs, tsk, cb) => {
 
 	async.map(queues, (q, next) => async.parallel([
 		next => cli.setex(tsk._tid, T.TTL_SEC, tsk._json, next),
-		next => cli.lpush(sub('wait', q), tsk._tid, next),
+		next => cli.lpush(sub(T.WAIT, q), tsk._tid, next),
 	], next), (e, r) => sure(cb)(e, tsk._tid, isArray ? r : r[0])); 
 }
 
 T._pull = (cli, q, isCircular=false, cb) => {
 	async.waterfall([
-		next => cli.rpoplpush(sub('wait', q), sub(isCircular?'wait':'work', q), next),
+		next => cli.rpoplpush(sub(T.WAIT, q), sub(isCircular?T.WAIT:T.WORK, q), next),
 		(tid, next) => !tid ? next() : cli.get(tid, (e, r) => next(e, parse(r), tid)),
 	], sure(cb)); 
 }
@@ -53,8 +56,8 @@ T.len = (cli, qs, cb) => {
 
 	async.map(queues, 
 		(q, next) => async.map([
-			sub('wait', q), 
-			sub('work', q)
+			sub(T.WAIT, q), 
+			sub(T.WORK, q)
 		], (sub,next) => cli.llen(sub, next), next), 
 	(e, r) => sure(cb)(e, isArray ? r : r[0])) 
 }
@@ -64,8 +67,8 @@ T.del = (cli, qs, tid, cb) => {
 
 	async.map(queues, (q, next) => async.parallel([
 		next => cli.del(tid, next),
-		next => cli.lrem(sub('wait', q), 1, tid, next),
-		next => cli.lrem(sub('work', q), 1, tid, next),
+		next => cli.lrem(sub(T.WAIT, q), 1, tid, next),
+		next => cli.lrem(sub(T.WORK, q), 1, tid, next),
 	], next), (e, r) => sure(cb)(e, isArray ? r : r[0]));
 }
 
@@ -73,9 +76,9 @@ T.reset = (cli, qs, tid, cb) => {
 	let {queues, isArray} = enqueue(qs);
 
 	async.map(queues, (q, next) => async.parallel([
-		next => cli.lrem(sub('wait', q), 1, tid, next),
-		next => cli.lrem(sub('work', q), 1, tid, next),
-		next => cli.lpush(sub('wait', q), tid, next),
+		next => cli.lrem(sub(T.WAIT, q), 1, tid, next),
+		next => cli.lrem(sub(T.WORK, q), 1, tid, next),
+		next => cli.lpush(sub(T.WAIT, q), tid, next),
 	], next), (e, r) => sure(cb)(e, isArray ? r : r[0]));
 }
 
@@ -83,14 +86,14 @@ T.resetAll = (cli, qs, cb) => {
 	let {queues, isArray} = enqueue(qs);
 
 	async.map(queues, (q, next) => async.forever(
-		next => cli.rpoplpush(sub('work', q), sub('wait', q), (e, r) => next(r ? null : 'DONE') & console.log(e,r))
+		next => cli.rpoplpush(sub(T.WORK, q), sub(T.WAIT, q), (e, r) => next(r ? null : 'DONE') & console.log(e,r))
 	, e => next()), (e, r) => sure(cb)(e, isArray ? r : r[0]));
 }
 
 T.status = (cli, cb) => {
 	async.waterfall([
 		next => cli.keys(ujoin(T.PREFIX, 'Q','*'), next),
-		(keys, next) => keys.sort() & async.map(keys, (k, next) => cli.llen(k, (e, l) => next(e, {[k]: l})), next),
+		(keys, next) => keys.sort() & async.map(keys, (k, next) => cli.llen(k, (e, l) => next(e, {[urepl(k)]: l})), next),
 	], cb);
 }
 
@@ -98,8 +101,8 @@ T.flush = (cli, qs, cb) => {
 	let {queues, isArray} = enqueue(qs);
 	
 	async.map(queues, (q, next) => async.parallel([
-		next => cli.del(sub('wait', q), next),
-		next => cli.del(sub('work', q), next),
+		next => cli.del(sub(T.WAIT, q), next),
+		next => cli.del(sub(T.WORK, q), next),
 	], next), (e, r) => sure(cb)(e, isArray ? r : r[0]));
 }
 
@@ -110,28 +113,32 @@ T.wipe = (cli, wildcard, cb) => {
 module.exports = exports = T;
 
 try {
-	if (!~process.argv.indexOf('-e') && !~process.argv.indexOf('--execute')) return;
+	(main => {
+		if (!~process.argv.indexOf('-e') && !~process.argv.indexOf('--execute')) return;
 
-	const { program } = require('commander');
+		const { program } = require('commander');
 
-	program
-		.option('-e, --execute', 'Run as CLI-EXECUTE mode')
-		.option('-c, --cli <cmd>', 'Command to execute')
-		.option('-r, --redis <redis>', 'Redis connection string')
-		.option('-q, --queue <queue>', 'Queue name')
-		.option('-v, --var <var>', 'Rest variables according to command', (v, p) => p.concat([v]), [])
-	program.parse(process.argv);
+		program
+			.option('-e, --execute', 'Run as CLI-EXECUTE mode')
+			.option('-c, --cli <cmd>', 'Command to execute')
+			.option('-r, --redis <redis>', 'Redis connection string')
+			.option('-q, --queue <queue>', 'Queue name')
+			.option('-v, --var <var>', 'Rest variables according to command', (v, p) => p.concat([v]), [])
+		program.parse(process.argv);
 
-	if (!program.redis) return console.log('Redis is missing');
-	if (!program.cli) return console.log('Command is missing');
+		program.redis = program.redis || process.env.REDIS_URL;
+		
+		if (!program.redis) return console.log('Redis is missing');
+		if (!program.cli) return console.log('Command is missing');
 
-	const redis = require('redis').createClient(program.redis);
-	const _output = cmd => cmd || ((e,r) => console.log('\n---\nCMD:', program.cli, '\nERR:', e, '\nRESULT:\n', r) & redis.quit());
+		const redis = require('redis').createClient(program.redis);
+		const _output = cmd => cmd || ((e,r) => console.log('\n---\nCMD:', program.cli, '\nERR:', e, '\nRESULT:\n', r) & redis.quit());
 
-	const vars = [redis, _output(program.queue), ..._output(program.var), _output()];
-	console.log('VARS:', program.cli, vars.slice(1))
-	
-	return T[program.cli].apply(null, vars);
+		const vars = [redis, _output(program.queue), ..._output(program.var), _output()];
+		console.log('VARS:', program.cli, vars.slice(1))
+		
+		return T[program.cli].apply(null, vars);
+	})();
 } catch (ex) {
 	console.log('EXECUTE_CATCH:', ex);
 }

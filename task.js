@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const async = require('async');
 
 const T = { 
@@ -145,5 +147,5 @@ try {
 	console.log('EXECUTE_CATCH:', ex);
 }
 
-// DOTENV=1 node task.js -e -q QTEST -c push -v "{\"a\":1}"
+// DOTENV=1 rq -e -q QTEST -c push -v "{\"a\":1}"
 // DOTENV=1 node task.js -e -q QTEST -c pull

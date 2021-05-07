@@ -21,12 +21,12 @@
   },
   "homepage": "https://github.com/royalgarter/r-queue#readme",
   "dependencies": {
-    "async": "^3.2.0"
+    "async": "^3.2.0",
+    "commander": "^6.2.0",
+    "redis": "3.0.2",
   },
   "devDependencies": {
-    "dotenv": "^9.0.0",
-    "commander": "^6.2.0",
-    "redis": "3.0.2"
+    "dotenv": "^9.0.0"
   },
   "_id": "r-queue@1.0.0",
   "_from": "r-queue@*"

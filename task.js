@@ -1,5 +1,3 @@
-process.env.DOTENV && require('dotenv').config();
-
 const async = require('async');
 
 const T = { 

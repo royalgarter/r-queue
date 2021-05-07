@@ -1,6 +1,8 @@
-const T = require('task.js');
+const T = require('./task.js');
 const async = require('async');
 const cli = require('redis').createClient(process.env.REDIS_URL);
+
+let q = 'Q_TEST';
 
 async.waterfall([
 	next => T.push(cli, q, {data: 1}, (e, r) => console.log('push', e, r) & next(e,r)),

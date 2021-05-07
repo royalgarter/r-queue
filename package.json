@@ -1,8 +1,11 @@
 {
   "name": "r-queue",
   "version": "1.0.0",
-  "description": "Simpl Redis Task Queue",
+  "description": "Simple Redis Task Queue",
   "main": "task.js",
+  "bin": {
+    "rq": "./task.js"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -20,9 +23,10 @@
   "dependencies": {
     "async": "^3.2.0"
   },
-  "devDependencies" : {
+  "devDependencies": {
+    "dotenv": "^9.0.0",
     "commander": "^6.2.0",
-    "redis": "^3.0.2"
+    "redis": "3.0.2"
   },
   "_id": "r-queue@1.0.0",
   "_from": "r-queue@*"

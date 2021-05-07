@@ -1,3 +1,5 @@
+process.env.DOTENV && require('dotenv').config();
+
 const async = require('async');
 
 const T = { 
@@ -16,7 +18,8 @@ const gid = (str, salt) => ujoin(T.PREFIX, 'ID', require('crypto').createHash('m
 const enqueue = (queues) => Array.isArray(queues) ? {queues, isArray: true} : {queues: [queues], isArray: false};
 const sure = cb => { if (typeof cb == 'function') return cb; else throw new TypeError('Callback is missing or not a function'); }
 const wrap = o => {
-	if (typeof o != 'object'||o._tid||o._json) throw new TypeError('Task must be non-circular Object without (_tid, _json) key');
+	o = typeof o == 'string' ? parse(o) : o;
+	if (!o || typeof o != 'object' || o._tid || o._json) throw new TypeError('Task must be defined non-circular Object without (_tid, _json) key');
 	return (o._tid = gid(json(o), Date.now())) && (o._json = json(o)) && o;
 }
 
@@ -120,6 +123,7 @@ try {
 
 		program
 			.option('-e, --execute', 'Run as CLI-EXECUTE mode')
+			.option('-d, --debug', 'DEBUG mode')
 			.option('-c, --cli <cmd>', 'Command to execute')
 			.option('-r, --redis <redis>', 'Redis connection string')
 			.option('-q, --queue <queue>', 'Queue name')
@@ -132,13 +136,16 @@ try {
 		if (!program.cli) return console.log('Command is missing');
 
 		const redis = require('redis').createClient(program.redis);
-		const _output = cmd => cmd || ((e,r) => console.log('\n---\nCMD:', program.cli, '\nERR:', e, '\nRESULT:\n', r) & redis.quit());
+		const _output = cmd => cmd || ((e,r) => console.log((program.debug ? `\n---\nCMD: ${program.cli}\nERR: ${e}\nRESULT:\n` : '') + json(r)) & redis.quit());
 
 		const vars = [redis, _output(program.queue), ..._output(program.var), _output()];
-		console.log('VARS:', program.cli, vars.slice(1))
+		program.debug && console.log(`VARS: ${program.cli} ${vars.slice(1)}`);
 		
 		return T[program.cli].apply(null, vars);
 	})();
 } catch (ex) {
 	console.log('EXECUTE_CATCH:', ex);
 }
+
+// DOTENV=1 node task.js -e -q QTEST -c push -v "{\"a\":1}"
+// DOTENV=1 node task.js -e -q QTEST -c pull

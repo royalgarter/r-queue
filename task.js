@@ -7,6 +7,10 @@ const T = {
 	TTL_SEC: 60*60*24*30,
 	WAIT: 'WAIT',
 	WORK: 'WORK',
+
+	options: {
+		enclosure: false,
+	}
 };
 
 const json = o => JSON.stringify(o);
@@ -14,13 +18,21 @@ const parse = str => { try { return typeof str == 'string' ? JSON.parse(str) : s
 const urepl = name => name.replace(new RegExp(`${T.PREFIX}_Q_(${T.WAIT}|${T.WORK})_`, 'gi'), '');
 const ujoin = (...args) => args.join('_').toUpperCase();
 const sub = (type, name) => ujoin(T.PREFIX, 'Q', type, name);
-const gid = (str, salt) => ujoin(T.PREFIX, 'ID', require('crypto').createHash('md5').update(str+(salt||'')).digest('hex'));
+const gid = (str, salt) => ujoin(T.PREFIX, 'ID', require('crypto').createHash('md5').update(str+(salt||'')).digest('hex').substr(0, 8));
 const enqueue = (queues) => Array.isArray(queues) ? {queues, isArray: true} : {queues: [queues], isArray: false};
 const sure = cb => { if (typeof cb == 'function') return cb; else throw new TypeError('Callback is missing or not a function'); }
 const wrap = o => {
 	o = typeof o == 'string' ? parse(o) : o;
-	if (!o || typeof o != 'object' || o._tid || o._json) throw new TypeError('Task must be defined non-circular Object without (_tid, _json) key');
-	return (o._tid = gid(json(o), Date.now())) && (o._json = json(o)) && o;
+
+	if (!o || typeof o != 'object') throw new TypeError('Task must be defined non-circular Object or Object in JSON format');
+
+	let task = { _tid: gid(json(o), Date.now()), _json: json(o) };
+
+	if (T.options.enclosure) return Object.assign(task, {task: o});
+
+	if (o._tid || o._json) throw new TypeError('Task mustn\'t have (_tid, _json) key or switch using "enclosure=true" options');
+	
+	return Object.assign(task, o);
 }
 
 T.push = (cli, qs, tsk, cb) => {
@@ -147,5 +159,5 @@ try {
 	console.log('EXECUTE_CATCH:', ex);
 }
 
-// DOTENV=1 rq -e -q QTEST -c push -v "{\"a\":1}"
+// DOTENV=1 node task.js -e -q QTEST -c push -v "{\"a\":1}"
 // DOTENV=1 node task.js -e -q QTEST -c pull

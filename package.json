@@ -1,13 +1,10 @@
 {
   "name": "r-queue",
   "version": "1.0.0",
-  "description": "Simple Redis Task Queue",
+  "description": "Simple Node.js Redis Task Queue",
   "main": "task.js",
   "bin": {
-    "rq": "./task.js"
-  },
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "nrq": "./task.js"
   },
   "repository": {
     "type": "git",

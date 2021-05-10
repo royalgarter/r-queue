@@ -26,13 +26,16 @@ const wrap = o => {
 
 	if (!o || typeof o != 'object') throw new TypeError('Task must be defined non-circular Object or Object in JSON format');
 
-	let task = { _tid: gid(json(o), Date.now()), _json: json(o) };
+	let _tid = gid(json(o), Date.now());
 
-	if (T.options.enclosure) return Object.assign(task, {task: o});
+	if (T.options.enclosure) {
+		let task = Object.assign({_tid}, {task: o}); 
+		return (task._json = json(task)) && task;
+	}
 
 	if (o._tid || o._json) throw new TypeError('Task mustn\'t have (_tid, _json) key or switch using "enclosure=true" options');
 	
-	return Object.assign(task, o);
+	return (o._tid = _tid) && (o._json = json(o)) && o;
 }
 
 T.push = (cli, qs, tsk, cb) => {
@@ -108,8 +111,8 @@ T.resetAll = (cli, qs, cb) => {
 T.status = (cli, cb) => {
 	async.waterfall([
 		next => cli.keys(ujoin(T.PREFIX, 'Q','*'), next),
-		(keys, next) => keys.sort() & async.map(keys, (k, next) => cli.llen(k, (e, l) => next(e, {[urepl(k)]: l})), next),
-	], cb);
+		(keys, next) => keys.sort() & async.map(keys, (k, next) => cli.llen(k, (e, l) => next(e, {[urepl(k)]: l, key: k})), next),
+	], (e, r) => sure(cb)(e, r));
 }
 
 T.flush = (cli, qs, cb) => {

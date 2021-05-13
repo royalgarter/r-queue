@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 const async = require('async');
+const util = require('util');
+Object.assign(util.inspect.defaultOptions, {depth: 5, colors: process.env.HEROKU ? false : true, compact: true});
 
 const T = { 
 	PREFIX: process.env.TASK_QUEUE_PREFIX || 'TSKQ',
@@ -127,7 +129,7 @@ T.status = (cli, cb) => {
 T.wipe = (cli, wildcard, cb) => {
 	async.waterfall([
 		next => cli.keys(`*${T.PREFIX}*${wildcard||''}*`, next),
-		(keys, next) => console.log('WIPED: ', keys) & cli.del(...keys, next),
+		(keys, next) => util.inspect('WIPED: ', keys) & cli.del(...keys, next),
 	], sure(cb));
 }
 
@@ -150,19 +152,19 @@ try {
 
 		program.redis = program.redis || process.env.REDIS_URL;
 		
-		if (!program.redis) return console.log('Redis <-r> is missing');
-		if (!program.cli) return console.log('Command <-c> is missing');
+		if (!program.redis) return util.inspect('Redis <-r> is missing');
+		if (!program.cli) return util.inspect('Command <-c> is missing');
 
 		const redis = require('redis').createClient(program.redis);
-		const _output = cmd => cmd || ((e,r) => console.log((program.debug ? `\n---\nCMD: ${program.cli}\nERR: ${e}\nRESULT:\n` : '') + json(r)) & redis.quit());
+		const _output = cmd => cmd || ((e,r) => util.inspect((program.debug ? `\n---\nCMD: ${program.cli}\nERR: ${e}\nRESULT:\n` : '') + json(r)) & redis.quit());
 
 		const vars = [redis, ...(~['status', 'wipe'].indexOf(program.cli) ? [] : _output(program.queue)), ..._output(program.var), _output()];
-		program.debug && console.log(`VARS: ${program.cli} ${vars.slice(1)}`);
+		program.debug && util.inspect(`VARS: ${program.cli} ${vars.slice(1)}`);
 		
 		return T[program.cli].apply(null, vars);
 	})();
 } catch (ex) {
-	console.log('EXECUTE_CATCH:', ex);
+	util.inspect('EXECUTE_CATCH:', ex);
 }
 
 // node task.js -e -q QTEST -c push -v "{\"a\":1}"

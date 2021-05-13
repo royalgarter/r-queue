@@ -108,13 +108,6 @@ T.resetAll = (cli, qs, cb) => {
 	, e => next()), (e, r) => sure(cb)(e, isArray ? r : r[0]));
 }
 
-T.status = (cli, cb) => {
-	async.waterfall([
-		next => cli.keys(ujoin(T.PREFIX, 'Q','*'), next),
-		(keys, next) => keys.sort() & async.map(keys, (k, next) => cli.llen(k, (e, l) => next(e, {[urepl(k)]: l, key: k})), next),
-	], (e, r) => sure(cb)(e, r));
-}
-
 T.flush = (cli, qs, cb) => {
 	let {queues, isArray} = enqueue(qs);
 	
@@ -124,8 +117,18 @@ T.flush = (cli, qs, cb) => {
 	], next), (e, r) => sure(cb)(e, isArray ? r : r[0]));
 }
 
+T.status = (cli, cb) => {
+	async.waterfall([
+		next => cli.keys(ujoin(T.PREFIX, 'Q','*'), next),
+		(keys, next) => keys.sort() & async.map(keys, (k, next) => cli.llen(k, (e, l) => next(e, {[urepl(k)]: l, key: k})), next),
+	], (e, r) => sure(cb)(e, r));
+}
+
 T.wipe = (cli, wildcard, cb) => {
-	cli.eval("for i, name in ipairs(redis.call('KEYS', ARGV[1])) do redis.call('DEL', name); end", 0, `prefix:*${T.PREFIX}*${wildcard}`, sure(cb));
+	async.waterfall([
+		next => cli.keys(`*${T.PREFIX}*${wildcard}*`, next),
+		(keys, next) => console.log('DEL', keys) & cli.del(...keys, next),
+	], sure(cb));
 }
 
 module.exports = exports = T;
@@ -147,13 +150,13 @@ try {
 
 		program.redis = program.redis || process.env.REDIS_URL;
 		
-		if (!program.redis) return console.log('Redis is missing');
-		if (!program.cli) return console.log('Command is missing');
+		if (!program.redis) return console.log('Redis <-r> is missing');
+		if (!program.cli) return console.log('Command <-c> is missing');
 
 		const redis = require('redis').createClient(program.redis);
 		const _output = cmd => cmd || ((e,r) => console.log((program.debug ? `\n---\nCMD: ${program.cli}\nERR: ${e}\nRESULT:\n` : '') + json(r)) & redis.quit());
 
-		const vars = [redis, _output(program.queue), ..._output(program.var), _output()];
+		const vars = [redis, ...(~['status', 'wipe'].indexOf(program.cli) ? [] : _output(program.queue)), ..._output(program.var), _output()];
 		program.debug && console.log(`VARS: ${program.cli} ${vars.slice(1)}`);
 		
 		return T[program.cli].apply(null, vars);
@@ -162,5 +165,6 @@ try {
 	console.log('EXECUTE_CATCH:', ex);
 }
 
-// DOTENV=1 node task.js -e -q QTEST -c push -v "{\"a\":1}"
-// DOTENV=1 node task.js -e -q QTEST -c pull
+// node task.js -e -q QTEST -c push -v "{\"a\":1}"
+// node task.js -e -q QTEST -c pull
+// node task.js -e -c status

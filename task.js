@@ -126,8 +126,8 @@ T.status = (cli, cb) => {
 
 T.wipe = (cli, wildcard, cb) => {
 	async.waterfall([
-		next => cli.keys(`*${T.PREFIX}*${wildcard}*`, next),
-		(keys, next) => console.log('DEL', keys) & cli.del(...keys, next),
+		next => cli.keys(`*${T.PREFIX}*${wildcard||''}*`, next),
+		(keys, next) => console.log('WIPED: ', keys) & cli.del(...keys, next),
 	], sure(cb));
 }
 

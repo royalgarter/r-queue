@@ -137,8 +137,6 @@ module.exports = exports = T;
 
 try {
 	(main => {
-		if (!~process.argv.indexOf('-e') && !~process.argv.indexOf('--execute')) return;
-
 		const { program } = require('commander');
 
 		program
@@ -149,6 +147,8 @@ try {
 			.option('-q, --queue <queue>', 'Queue name')
 			.option('-v, --var <var>', 'Rest variables according to command', (v, p) => p.concat([v]), [])
 		program.parse(process.argv);
+
+		if (!~process.argv.indexOf('-e') && !~process.argv.indexOf('--execute')) return;
 
 		program.redis = program.redis || process.env.REDIS_URL;
 		

@@ -15,7 +15,7 @@ const T = {
 	}
 };
 
-const json = o => JSON.stringify(o);
+const json = o => JSON.stringify(o, null, 2);
 const parse = str => { try { return typeof str == 'string' ? JSON.parse(str) : str} catch(ex) {return null} };
 const urepl = name => name.replace(new RegExp(`${T.PREFIX}_Q_(${T.WAIT}|${T.WORK})_`, 'gi'), '');
 const ujoin = (...args) => args.join('_').toUpperCase();

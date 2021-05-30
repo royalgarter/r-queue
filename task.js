@@ -122,7 +122,11 @@ T.flush = (cli, qs, cb) => {
 T.status = (cli, cb) => {
 	async.waterfall([
 		next => cli.keys(ujoin(T.PREFIX, 'Q','*'), next),
-		(keys, next) => keys.sort() & async.map(keys, (k, next) => cli.llen(k, (e, l) => next(e, {[urepl(k)]: l, key: k})), next),
+		(keys, next) => keys.sort() & async.map(keys, (k, next) => cli.llen(k, (e, l) => next(e, {
+			[urepl(k)]: l,
+			type: k.replace(`${T.PREFIX}_Q_`, ``).replace(`_${urepl(k)}`, ``), 
+			raw: k,
+		})), next),
 	], (e, r) => sure(cb)(e, r));
 }
 

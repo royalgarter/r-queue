@@ -173,7 +173,7 @@ try {
 
 		program.parse(process.argv);
 
-		if (!~process.argv.indexOf('-e') && !~process.argv.indexOf('--execute')) return program.help();
+		if (!~process.argv.indexOf('-e') && !~process.argv.indexOf('--execute')) return;
 
 		program.redis = program.redis || process.env.REDIS_URL;
 		

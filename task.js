@@ -173,21 +173,23 @@ try {
 
 		program.parse(process.argv);
 
+		const options = program.opts();
+
 		if (!~process.argv.indexOf('-e') && !~process.argv.indexOf('--execute')) return;
 
-		program.redis = program.redis || process.env.REDIS_URL;
+		options.redis = options.redis || process.env.REDIS_URL;
 		
-		if (!program.redis) return console.log('Redis <-r> is missing');
-		if (!program.cli) return console.log('Command <-c> is missing');
+		if (!options.redis) return console.log('Redis <-r> is missing');
+		if (!options.cli) return console.log('Command <-c> is missing');
 
-		const redis = require('redis').createClient(program.redis);
-		const _output = cmd => cmd || ((e,r) => console.log((program.debug ? `\n---\nCMD: ${program.cli}\nERR: ${e}\nRESULT:\n` : '') + json(r)) & redis.quit());
+		const redis = require('redis').createClient(options.redis);
+		const _output = cmd => cmd || ((e,r) => console.log((options.debug ? `\n---\nCMD: ${options.cli}\nERR: ${e}\nRESULT:\n` : '') + json(r)) & redis.quit());
 
-		const vars = [redis, ...(~['status', 'wipe'].indexOf(program.cli) ? [] : [_output(program.queue)]), ..._output(program.var), _output()];
-		program.debug && console.log(`VARS: ${program.cli} ${vars.slice(1)}`);
+		const vars = [redis, ...(~['status', 'wipe'].indexOf(options.cli) ? [] : [_output(options.queue)]), ..._output(options.var), _output()];
+		options.debug && console.log(`VARS: ${options.cli} ${vars.slice(1)}`);
 		
 		// console.log('vars', vars);
-		return T[program.cli].apply(null, vars);
+		return T[options.cli].apply(null, vars);
 	})();
 } catch (ex) {
 	console.log('EXECUTE_CATCH:', ex);

@@ -84,9 +84,7 @@ T.fpull = (cli, q, ms = 1e3, cb) => { //Return a stop function & setup forever p
 	return () => stop = true;
 };
 
-T.listen = (cli, q, o = {keepAlive:true, interval:1e3}, cb) => { //Listen on specific queue and callback whenever received a task
-	cb = cb || (typeof o == 'function' && o);
-
+T.listen = (cli, q, cb, o = {keepAlive:true, interval:1e3}) => { //Listen on specific queue and callback whenever received a task
 	async.forever(next => T.pull(cli, q, (e, r) => {
 			if (e && !o.keepAlive) return next(e);
 			if (r) cb(e, r);

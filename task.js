@@ -74,7 +74,7 @@ T.ppull = (cli, qs, cb) => { //Pulling task from many queues as once
 T.lpull = (cli, q, t = {times:30, interval:1e3}, cb) => { // Long pulling from queue with retry option
 	async.retry(t, next => T.pull(cli, q, (e,r) => next(!r ? (e||'Q_EMPTY') : null, r) ), sure(cb)); }
 
-T.fpull = (cli, q, ms = 1e3, cb) => { //Return a stop function & setup interval pulling task from queue until the returned stop function is called
+T.fpull = (cli, q, ms = 1e3, cb) => { //Return a stop function & setup forever pulling task from queue until pulled or the returned stop function is called
 	cb = cb || (typeof ms == 'function' && ms);
 	let stop = false;
 
@@ -82,6 +82,17 @@ T.fpull = (cli, q, ms = 1e3, cb) => { //Return a stop function & setup interval 
 					r => stop ? sure(cb)('STOPPED') : sure(cb)(null, r));
 
 	return () => stop = true;
+};
+
+T.listen = (cli, q, o = {keepAlive:true, interval:1e3}, cb) => { //Listen on specific queue and callback whenever received a task
+	cb = cb || (typeof o == 'function' && o);
+
+	async.forever(next => T.pull(cli, q, (e, r) => {
+			if (e && !o.keepAlive) return next(e);
+			if (r) cb(e, r);
+			setTimeout(next, o.interval);
+		}
+	), e => sure(cb)(e));
 };
 
 T.len = (cli, qs, cb) => { //Get total tasks in queue

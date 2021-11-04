@@ -191,7 +191,17 @@ try {
 		if (!options.redis) return console.log('Redis <-r> is missing');
 		if (!options.cli) return console.log('Command <-c> is missing');
 
-		const redis = require('redis').createClient(options.redis);
+		const redisOpts = {
+			retry_unfulfilled_commands: true,
+			retry_strategy: opts => {
+				if (opts.error && opts.error.code === 'ECONNREFUSED') return new Error('The server refused the connection');
+				if (opts.total_retry_time > 1000 * 60 * 60) return new Error('Retry time exhausted');
+				if (opts.attempt > 10) return undefined;
+				return Math.min(opts.attempt * 100, 3000);
+			}
+		}
+
+		const redis = require('redis').createClient(options.redis, redisOpts);
 		const _output = cmd => cmd || ((e,r) => console.log((options.debug ? `\n---\nCMD: ${options.cli}\nERR: ${e}\nRESULT:\n` : '') + json(r)) & redis.quit());
 
 		const vars = [redis, ...(~['status', 'wipe'].indexOf(options.cli) ? [] : [_output(options.queue)]), ..._output(options.var), _output()];

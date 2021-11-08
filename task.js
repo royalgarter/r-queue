@@ -21,6 +21,8 @@ const __create = (cfg, opt) => {
 		},
 	};
 
+	const REDIS = cfg?.redis || cfg?.options?.redis || opt?.redis;
+
 	const _ = () => undefined;
 	const json = o => JSON.stringify(o, null, 2);
 	const parse = str => { try { return typeof str == 'string' ? JSON.parse(str) : str} catch(ex) {return null} };
@@ -181,6 +183,15 @@ const __create = (cfg, opt) => {
 				console.log(` >nrq.${key}`, args.slice(1).slice(0,-1)) & fn.apply(null, args);
 			}
 		}
+
+		if (REDIS) console.log(' >Inited with default RedisClient:', REDIS.address);
+	}
+
+	for (let key of Object.keys(T)) {
+		if (typeof T[key] != 'function') continue;
+
+		let fn = T[key];
+		T[key] = (...args) => fn.apply(null, !(args?.[0] instanceof require('redis').RedisClient) ? [REDIS, ...args] : args);
 	}
 
 	return T;

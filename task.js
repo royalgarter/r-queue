@@ -94,12 +94,16 @@ const __create = (cfg, opt) => {
 		return (() => stop = true);
 	};
 
-	T.listen = function(cli, q, cb, o={keepAlive:true, interval:1e3}){//Listen on specific queue and callback whenever received a task
-		async.forever(next => T.pull(cli, q, (e, r) => {
-			if (e && !o.keepAlive) return next(e);
+	T.listen = function(cli, q, cb, o={keepAlive:true, interval:1e3, pause:false}){//Listen on specific queue and callback whenever received a task
+		let pointer = null;
+		let resume = () => pointer?.();
+		async.forever(next => (pointer = null) & T._pull(cli, q, false, (e, r) => {
+			if (e && !o?.keepAlive) return next(e);
 			if (r) cb(e, r);
-			setTimeout(next, o.interval);
+			if (o?.pause) return (pointer = next);
+			setTimeout(next, o?.interval || 1e3);
 		}), e => sure(cb)(e));
+		return resume;
 	};
 
 	T.len = function(cli, qs, cb){//Get total tasks in queue

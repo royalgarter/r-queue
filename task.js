@@ -11,12 +11,11 @@ const __create = (cfg, opt) => {
 		WAIT: 'WAIT',
 		WORK: 'WORK',
 		ENCLOSURE: false,
+		PROMISE: false,
 		...(cfg || {}),
 
 		options: { 
-			enclosure: false, 
-			debug: false,
-			unsafe: false,
+			enclosure: false, promise: false, debug: false, unsafe: false,
 			...(opt || cfg?.options || {}),
 		},
 	};
@@ -94,7 +93,7 @@ const __create = (cfg, opt) => {
 		return (() => stop = true);
 	};
 
-	T.listen = function(cli, q, cb, o={keepAlive:true, interval:1e3, pause:false}){//Listen on specific queue and callback whenever received a task
+	T.listen = function(cli, q, o={keepAlive:true, interval:1e3, pause:false}, cb){//Listen on specific queue and callback whenever received a task
 		let pointer = null;
 		let resume = () => pointer?.();
 		o = {keepAlive:true, interval:1e3, pause:false, ...(o || {})};
@@ -203,6 +202,11 @@ const __create = (cfg, opt) => {
 
 		let fn = T[key];
 		T[key] = (...args) => fn.apply(null, !(args?.[0] instanceof require('redis').RedisClient) ? [REDIS, ...args] : args);
+
+		if (T.PROMISE || T.options.promise) {
+			let fn2 = T[key];
+			T[key] = util.promisify(fn2);
+		}
 	}
 
 	return T;

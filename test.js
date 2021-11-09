@@ -13,14 +13,14 @@ switch (TESTCASE) {
 		next => async.times(10, (n, next) => T.push(QUEUE, {date: new Date()}, (e, r) => next(e,r)), next),
 		(id, next) => T.len(QUEUE, (e, r) => next(e,id)),
 	], e => {
-		let resume = T.listen(QUEUE, (e, r) => {
+		let resume = T.listen(QUEUE, {pause:true}, (e, r) => {
 			if (e || !r) return;
 
 			console.log('pulled', r);
 			resume?.();
 
 			T.del(QUEUE, r._tid);
-		}, {pause:true});
+		});
 
 		console.log('resume', resume);
 	})

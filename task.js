@@ -97,10 +97,13 @@ const __create = (cfg, opt) => {
 	T.listen = function(cli, q, cb, o={keepAlive:true, interval:1e3, pause:false}){//Listen on specific queue and callback whenever received a task
 		let pointer = null;
 		let resume = () => pointer?.();
+		o = {keepAlive:true, interval:1e3, pause:false, ...(o || {})};
+		if (T.options.debug) console.log(' >Listened: ', o);
 		async.forever(next => (pointer = null) & T._pull(cli, q, false, (e, r) => {
 			if (e && !o?.keepAlive) return next(e);
+			if (o?.pause) pointer = next;
 			if (r) cb(e, r);
-			if (o?.pause) return (pointer = next);
+			if (o?.pause) return;
 			setTimeout(next, o?.interval || 1e3);
 		}), e => sure(cb)(e));
 		return resume;
@@ -183,8 +186,12 @@ const __create = (cfg, opt) => {
 			T[key] = (...args) => {
 				let cb = args[args.length - 1];
 				if (typeof cb == 'function')
-					args[args.length - 1] = (...args2) => console.log(` >nrq.${key}.done`, args2) & cb.apply(null, args2);
-				console.log(` >nrq.${key}`, args.slice(1).slice(0,-1)) & fn.apply(null, args);
+					args[args.length - 1] = (...args2) => {
+						console.log(` >nrq.${key}.done`, args2) 
+						return cb.apply(null, args2)
+					};
+				console.log(` >nrq.${key}`, args.slice(1).slice(0,-1)) 
+				return fn.apply(null, args);
 			}
 		}
 

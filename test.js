@@ -10,16 +10,19 @@ let TESTCASE = process.argv.slice(2)[0];
 
 switch (TESTCASE) {
 	case 'listen': async.waterfall([
-		next => async.times(10, (n, next) => T.push(cli, QUEUE, {date: new Date()}, (e, r) => next(e,r)), next),
-		(id, next) => T.len(cli, QUEUE, (e, r) => next(e,id)),
+		next => async.times(10, (n, next) => T.push(QUEUE, {date: new Date()}, (e, r) => next(e,r)), next),
+		(id, next) => T.len(QUEUE, (e, r) => next(e,id)),
 	], e => {
-		T.listen(cli, QUEUE, (e, r) => {
+		let resume = T.listen(QUEUE, (e, r) => {
 			if (e || !r) return;
 
 			console.log('pulled', r);
+			resume?.();
 
-			T.del(cli, QUEUE, r._tid);
-		});
+			T.del(QUEUE, r._tid);
+		}, {pause:true});
+
+		console.log('resume', resume);
 	})
 	break;
 

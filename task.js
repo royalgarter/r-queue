@@ -200,12 +200,13 @@ const __create = (cfg, opt) => {
 	for (let key of Object.keys(T)) {
 		if (typeof T[key] != 'function') continue;
 
-		let fn = T[key];
-		T[key] = (...args) => fn.apply(null, !(args?.[0] instanceof require('redis').RedisClient) ? [REDIS, ...args] : args);
+		if (REDIS) {
+			let fn = T[key];
+			T[key] = (...args) => fn.apply(null, !(args?.[0] instanceof require('redis').RedisClient) ? [REDIS, ...args] : args);	
+		}
 
 		if (T.PROMISE || T.options.promise) {
-			let fn2 = T[key];
-			T[key] = util.promisify(fn2);
+			T[key] = util.promisify(T[key]);
 		}
 	}
 

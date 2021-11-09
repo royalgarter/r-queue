@@ -100,9 +100,9 @@ const __create = (cfg, opt) => {
 		if (T.options.debug) console.log(' >Listened: ', o);
 		async.forever(next => (pointer = null) & T._pull(cli, q, false, (e, r) => {
 			if (e && !o?.keepAlive) return next(e);
-			if (o?.pause) pointer = next;
+			if (r && o?.pause) pointer = next;
 			if (r) cb(e, r);
-			if (o?.pause) return;
+			if (r && o?.pause) return;
 			setTimeout(next, o?.interval || 1e3);
 		}), e => sure(cb)(e));
 		return resume;

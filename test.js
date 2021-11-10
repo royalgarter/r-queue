@@ -3,7 +3,7 @@ const util = require('util');
 Object.assign(util.inspect.defaultOptions, {depth: 5, colors: process.env.HEROKU ? false : true, compact: true});
 const cli = require('redis').createClient(process.env.REDIS_URL);
 
-const T = require('./task.js').create(null, {enclosure: true, debug: true, unsafe: true, redis: cli});
+const T = require('./task.js').create({options: {enclosure: true, debug: true, unsafe: true, redis: cli}});
 // const T = require('./task.js');
 let QUEUE = 'QTEST';
 let TESTCASE = process.argv.slice(2)[0];

@@ -2,7 +2,7 @@
 
 const async = require('async');
 const util = require('util');
-Object.assign(util.inspect.defaultOptions, {depth: 5, colors: process.env.HEROKU ? false : true, compact: true});
+Object.assign(util.inspect.defaultOptions, {depth: 3, colors: process.env.HEROKU ? false : true, compact: true});
 
 const __create = (cfg, opt) => {
 	const T = { 
@@ -16,14 +16,14 @@ const __create = (cfg, opt) => {
 
 		options: { 
 			enclosure: false, promise: false, debug: false, unsafe: false,
-			...(opt || cfg?.options || {}),
+			...(cfg?.options || opt || {}),
 		},
 	};
 
 	const REDIS = cfg?.redis || cfg?.options?.redis || opt?.redis;
 
 	const _ = () => undefined;
-	const json = o => JSON.stringify(o, null, 2);
+	const json = o => JSON.stringify(o, (k,v) => v instanceof require('redis').RedisClient ? v.address : v, 2);
 	const parse = str => { try { return typeof str == 'string' ? JSON.parse(str) : str} catch(ex) {return null} };
 	const urepl = name => name.replace(new RegExp(`${T.PREFIX}_Q_(${T.WAIT}|${T.WORK})_`, 'gi'), '');
 	const ujoin = (...args) => args.join('_').toUpperCase();
@@ -49,7 +49,9 @@ const __create = (cfg, opt) => {
 		return (o._tid = _tid) && (o._json = json(o)) && o;
 	}
 
-	T.push = function(cli, qs, tsk, cb){//Push task to queue. The callback is returned with task id (_tid)
+	if (T.options.debug) console.log(' >Task queue inited:', json(T));
+
+	T.push = function(cli, qs, tsk, cb){// Push task to queue. The callback is returned with task id (_tid) >[ID, WAIT]
 		let {queues, isArray} = enqueue(qs);
 		tsk = wrap(tsk);
 
@@ -66,13 +68,13 @@ const __create = (cfg, opt) => {
 		], sure(cb)); 
 	}
 
-	T.pull = function(cli, q, cb){//Standard pulling task from WAIT queue and push to WORK queue. The task should be deleted when finished
+	T.pull = function(cli, q, cb){// Standard pulling task from WAIT queue and push to WORK queue. The task should be deleted when finished
 		T._pull(cli, q, false, cb); }
 
-	T.cpull = function(cli, q, cb){//Circular pulling task from WAIT and repush to WAIT
+	T.cpull = function(cli, q, cb){// Circular pulling task from WAIT and repush to WAIT
 		T._pull(cli, q, true, cb); }
 
-	T.ppull = function(cli, qs, cb){//Pulling task from many queues as once
+	T.ppull = function(cli, qs, cb){// Pulling task from many queues as once
 		let {queues, isArray} = enqueue(qs);
 
 		async.eachSeries(queues, 
@@ -80,10 +82,10 @@ const __create = (cfg, opt) => {
 		e => (typeof e == 'object' && !(e instanceof Error) && !e.stack) ? sure(cb)(null, e) : sure(cb)(e) );
 	}	
 
-	T.lpull = function(cli, q, t={times:30, interval:1e3}, cb){// Long pulling from queue with retry option
+	T.lpull = function(cli, q, t={times:30, interval:1e3}, cb){//  Long pulling from queue with retry option
 		async.retry(t, next => T._pull(cli, q, false, (e,r) => next(!r ? (e||'Q_EMPTY') : null, r) ), sure(cb)); }
 
-	T.fpull = function(cli, q, ms=1e3, cb){//Return a stop function & setup forever pulling task from queue until pulled or the returned stop function is called
+	T.fpull = function(cli, q, ms=1e3, cb){// Return a stop function & setup forever pulling task from queue until pulled or the returned stop function is called
 		cb = cb || (typeof ms == 'function' && ms);
 		let stop = false;
 
@@ -93,7 +95,7 @@ const __create = (cfg, opt) => {
 		return (() => stop = true);
 	};
 
-	T.listen = function(cli, q, o={keepAlive:true, interval:1e3, pause:false}, cb){//Listen on specific queue and callback whenever received a task
+	T.listen = function(cli, q, o={keepAlive:true, interval:1e3, pause:false}, cb){// Listen on specific queue and callback whenever received a task
 		let pointer = null;
 		let resume = () => pointer?.();
 		o = {keepAlive:true, interval:1e3, pause:false, ...(o || {})};
@@ -108,7 +110,7 @@ const __create = (cfg, opt) => {
 		return resume;
 	};
 
-	T.len = function(cli, qs, cb){//Get total tasks in queue
+	T.len = function(cli, qs, cb){// Get total tasks in queue >[WAIT, WORK]
 		let {queues, isArray} = enqueue(qs);
 
 		async.map(queues, 
@@ -119,7 +121,7 @@ const __create = (cfg, opt) => {
 		(e, r) => sure(cb)(e, isArray ? r : r[0])) 
 	}
 
-	T.del = function(cli, qs, tid, cb){//Delete specific task by ID when you finish it
+	T.del = function(cli, qs, tid, cb){// Delete specific task by ID when you finish it >[TASK, WAIT, WORK]
 		let {queues, isArray} = enqueue(qs);
 
 		async.map(queues, (q, next) => async.parallel([
@@ -129,28 +131,26 @@ const __create = (cfg, opt) => {
 		], next), (e, r) => sure(cb)(e, isArray ? r : r[0]));
 	}
 
-	T.reset = function(cli, qs, tid, cb){//Reset specific task by ID in queue to WAIT
+	T.reset = function(cli, qs, tid, cb){// Reset specific task by ID in queue to WAIT >[WAIT, WORK, ID]
 		let {queues, isArray} = enqueue(qs);
 		let tids = enqueue(tid).queues;
 
-		console.log('tids', tids, queues)
-
-		async.map(queues, (q, next) => async.each(tids, (id, next) => async.parallel([
+		async.map(queues, (q, next) => async.each(tids, (id, next) => async.series([
 			next => cli.lrem(sub(T.WAIT, q), 1, id, next),
 			next => cli.lrem(sub(T.WORK, q), 1, id, next),
 			next => cli.lpush(sub(T.WAIT, q), id, next),
 		], next), next), (e, r) => sure(cb)(e, isArray ? r : r[0]));
 	}
 
-	T.resetAll = function(cli, qs, cb){//Reset all tasks in specific queue to WAIT
+	T.resetAll = function(cli, qs, cb){// Reset all tasks in specific queue to WAIT
 		let {queues, isArray} = enqueue(qs);
 
 		async.map(queues, (q, next) => async.forever(
-			next => cli.rpoplpush(sub(T.WORK, q), sub(T.WAIT, q), (e, r) => next(r ? null : 'DONE') & console.log(e,r))
+			next => cli.rpoplpush(sub(T.WORK, q), sub(T.WAIT, q), (e, r) => next(r ? null : 'DONE'))
 		, e => next()), (e, r) => sure(cb)(e, isArray ? r : r[0]));
 	}
 
-	T.flush = function(cli, qs, cb){//Flush all tasks in specific queue (both WAIT & WORK)
+	T.flush = function(cli, qs, cb){// Flush all tasks in specific queue (both WAIT & WORK)
 		let {queues, isArray} = enqueue(qs);
 		
 		async.map(queues, (q, next) => async.parallel([
@@ -159,7 +159,7 @@ const __create = (cfg, opt) => {
 		], next), (e, r) => sure(cb)(e, isArray ? r : r[0]));
 	}
 
-	T.status = function(cli, cb){//Get status of every queues
+	T.status = function(cli, cb){// Get status of every queues
 		async.waterfall([
 			next => cli.keys(ujoin(T.PREFIX, 'Q','*'), next),
 			(keys, next) => keys.sort() & async.map(keys, (k, next) => cli.llen(k, (e, l) => next(e, {
@@ -170,16 +170,18 @@ const __create = (cfg, opt) => {
 		], (e, r) => sure(cb)(e, r));
 	}
 
-	T.wipe = function(cli, wildcard, cb){//Wipe all queues & data
+	T.wipe = function(cli, wildcard, cb){// Wipe all queues & data
 		async.waterfall([
 			next => cli.keys(`*${T.PREFIX}*${wildcard||''}*`, next),
-			(keys, next) => console.log('WIPED: ', keys) & cli.del(...keys, next),
+			(keys, next) => /*console.log('WIPED: ', keys) &*/ cli.del(...keys, next),
 		], sure(cb));
 	}
 
-	if (T.options.debug) {
-		for (let key of Object.keys(T)) {
-			if (typeof T[key] != 'function' || ~key.indexOf('_')) continue;
+	for (let key of Object.keys(T)) {
+		if (typeof T[key] != 'function') continue;
+
+		if (T.options.debug) {
+			if (~key.indexOf('_')) continue;
 
 			let fn = T[key];
 			T[key] = (...args) => {
@@ -193,12 +195,6 @@ const __create = (cfg, opt) => {
 				return fn.apply(null, args);
 			}
 		}
-
-		if (REDIS) console.log(' >Inited with default RedisClient:', REDIS.address);
-	}
-
-	for (let key of Object.keys(T)) {
-		if (typeof T[key] != 'function') continue;
 
 		if (REDIS) {
 			let fn = T[key];
@@ -226,6 +222,7 @@ try { (main => {
 		.option('-c, --cmd <cmd>', 'Command to execute')
 		.option('-r, --redis <redis>', 'Redis connection string')
 		.option('-q, --queue <queue>', 'Queue name')
+		.option('-p, --prefix <prefix>', 'Prefix name')
 		.option('-v, --var <var>', 'Rest variables according to command', (v, p) => p.concat([v]), [])
 
 	program.addHelpText('after', [
@@ -245,7 +242,7 @@ try { (main => {
 	const options = program.opts();
 
 	if (!~process.argv.indexOf('-e') && !~process.argv.indexOf('--execute')) return;
-	T = __create(null, options);
+	T = __create(options.prefix ? {PREFIX: options.prefix} : undefined, options);
 
 	options.redis = options.redis || process.env.REDIS_URL;
 	

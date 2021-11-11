@@ -260,7 +260,7 @@ try { (main => {
 	}
 
 	const redis = require('redis').createClient(options.redis, redisOpts);
-	const _output = cmd => cmd || ((e,r) => console.log((options.debug ? `\n---\nCMD: ${options.cmd}\nERR: ${e}\nRESULT:\n` : '') + json(r)) & redis.quit());
+	const _output = cmd => cmd || ((e,r) => console.log((options.debug ? `\n---\nCMD: ${options.cmd}\nERR: ${e}\nRESULT:\n` : '') + JSON.stringify(r, null, 2)) & redis.quit());
 
 	const vars = [redis, ...(~['status', 'wipe'].indexOf(options.cmd) ? [] : [_output(options.queue)]), ..._output(options.var), _output()];
 	options.debug && console.log(`VARS: ${options.cmd} ${vars.slice(1)}`);

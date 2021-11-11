@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const async = require('async');
+const crypto = require('crypto');
 const util = require('util');
 Object.assign(util.inspect.defaultOptions, {depth: 3, colors: process.env.HEROKU ? false : true, compact: true});
 
@@ -28,7 +29,7 @@ const __create = (cfg, opt) => {
 	const urepl = name => name.replace(new RegExp(`${T.PREFIX}_Q_(${T.WAIT}|${T.WORK})_`, 'gi'), '');
 	const ujoin = (...args) => args.join('_').toUpperCase();
 	const sub = (type, name) => ujoin(T.PREFIX, 'Q', type, name);
-	const gid = (str, salt) => ujoin(T.PREFIX, 'ID', require('crypto').randomUUID().replace(/-/g, ''));
+	const gid = (str, salt) => ujoin(T.PREFIX, 'ID', (crypto.randomUUID?.() || crypto.randomBytes(16).toString("hex")).replace(/-/g, ''));
 	// const gid = (str, salt) => ujoin(T.PREFIX, 'ID', require('crypto').createHash('md5').update(str+(salt||'')).digest('hex').substr(0, 8));
 	const enqueue = (queues) => Array.isArray(queues) ? {queues, isArray: true} : {queues: [queues], isArray: false};
 	const sure = cb => {if (typeof cb == 'function') return cb;if (T.options.unsafe) return _; else throw new TypeError('Callback is missing or not a function');}
@@ -69,10 +70,12 @@ const __create = (cfg, opt) => {
 	}
 
 	T.pull = function(cli, q, cb){// Standard pulling task from WAIT queue and push to WORK queue. The task should be deleted when finished
-		T._pull(cli, q, false, cb); }
+		return T._pull(cli, q, false, cb); 
+	}
 
 	T.cpull = function(cli, q, cb){// Circular pulling task from WAIT and repush to WAIT
-		T._pull(cli, q, true, cb); }
+		return T._pull(cli, q, true, cb); 
+	}
 
 	T.ppull = function(cli, qs, cb){// Pulling task from many queues as once
 		let {queues, isArray} = enqueue(qs);
@@ -201,8 +204,12 @@ const __create = (cfg, opt) => {
 			T[key] = (...args) => fn.apply(null, !(args?.[0] instanceof require('redis').RedisClient) ? [REDIS, ...args] : args);	
 		}
 
+		if (~key.indexOf('_')) continue;
+
 		if (T.PROMISE || T.options.promise) {
 			T[key] = util.promisify(T[key]);
+		} else {
+			T[key+'Async'] = util.promisify(T[key]);
 		}
 	}
 

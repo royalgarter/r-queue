@@ -101,7 +101,10 @@ const __create = (cfg, opt) => {
 	T.listen = function(cli, q, o={keepAlive:true, interval:1e3, pause:false}, cb){// Listen on specific queue and callback whenever received a task
 		let pointer = null;
 		let resume = () => pointer?.();
-		o = {keepAlive:true, interval:1e3, pause:false, ...(o || {})};
+
+		cb = (typeof o === 'function' && typeof cb !== 'function') ? o : cb;
+		o = {keepAlive:true, interval:1e3, pause:false, ...(typeof o === 'object' ? o : (cb || {}))};
+		
 		if (T.options.debug) console.log(' >Listened: ', o);
 		async.forever(next => (pointer = null) & T._pull(cli, q, false, (e, r) => {
 			if (e && !o?.keepAlive) return next(e);

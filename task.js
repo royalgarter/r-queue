@@ -183,6 +183,13 @@ const __create = (cfg, opt) => {
 		], sure(cb));
 	}
 
+	T.version = function(...args){// Current version information
+		const pkg = require(__dirname + '/package.json');
+		const cb = args?.[args?.length - 1];
+		if (typeof cb == 'function') cb(null, pkg?.version);
+		return pkg?.version;
+	}
+
 	for (let key of Object.keys(T)) {
 		if (typeof T[key] != 'function') continue;
 
@@ -223,6 +230,7 @@ module.exports = exports = {...__create(), create: __create};
 
 try { (main => {
 	const { program } = require('commander');
+	const pkg = require(__dirname + '/package.json');
 	let T = __create();
 
 	program
@@ -234,6 +242,13 @@ try { (main => {
 		.option('-q, --queue <queue>', 'Queue name')
 		.option('-p, --prefix <prefix>', 'Prefix name')
 		.option('-v, --var <var>', 'Rest variables according to command', (v, p) => p.concat([v]), [])
+
+	program.addHelpText('before', [
+		``,
+		`Version: ${pkg?.version}`,
+		`Readme: ${pkg?.homepage}`,
+		``,
+	].join('\n'));
 
 	program.addHelpText('after', [
 		`\nCommands (-c): `,

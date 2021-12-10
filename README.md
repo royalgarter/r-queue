@@ -57,6 +57,7 @@ Simple Redis Task Queue
       * listen:     (cli, q, o={keepAlive:true, interval:1e3, pause:false}, cb){// Listen on specific queue and callback whenever received a task
       * len:        (cli, qs, cb){// Get total tasks in queue >[WAIT, WORK]
       * del:        (cli, qs, tid, cb){// Delete specific task by ID when you finish it >[TASK, WAIT, WORK]
+      * state:      (cli, qs, tid, cb){// Check the state of task by ID >[WAITING, WORKING]
       * reset:      (cli, qs, tid, cb){// Reset specific task by ID in queue to WAIT >[WAIT, WORK, ID]
       * resetAll:   (cli, qs, cb){// Reset all tasks in specific queue to WAIT
       * flush:      (cli, qs, cb){// Flush all tasks in specific queue (both WAIT & WORK)
@@ -72,6 +73,7 @@ Simple Redis Task Queue
       * listenAsync: fn(...args) { // return Promise
       * lenAsync:    fn(...args) { // return Promise
       * delAsync:    fn(...args) { // return Promise
+      * stateAsync:  fn(...args) { // return Promise
       * flushAsync:  fn(...args) { // return Promise
       * statusAsync: fn(...args) { // return Promise
       * wipeAsync:   fn(...args) { // return Promise

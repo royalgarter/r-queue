@@ -137,6 +137,17 @@ const __create = (cfg, opt) => {
 		], next), (e, r) => sure(cb)(e, isArray ? r : r[0]));
 	}
 
+	T.state = function(cli, qs, tid, cb){// Check the state of task by ID >[WAITING, WORKING]
+		let {queues, isArray} = enqueue(qs);
+
+		const isInclude = (q, tid, next) => cli.lrange(q, 0, -1, (e, arr) => next(e, ~~arr?.includes(tid)));
+
+		async.map(queues, (q, next) => async.parallel([
+			next => isInclude(sub(T.WAIT, q), tid, next),
+			next => isInclude(sub(T.WORK, q), tid, next),
+		], next), (e, r) => sure(cb)(e, isArray ? r : r[0]));
+	}
+
 	T.reset = function(cli, qs, tid, cb){// Reset specific task by ID in queue to WAIT >[WAIT, WORK, ID]
 		let {queues, isArray} = enqueue(qs);
 		let tids = enqueue(tid).queues;
@@ -255,9 +266,9 @@ try { (main => {
 		...Object.keys(T)
 			.filter(k => typeof T[k] == 'function' && !~k.indexOf('_'))
 			.map(k => `  * ${k}:\t` + T[k]?.toString()?.split('\n')?.[0]?.replace('function', '')),
-		`\nExamples: exec=(node task.js / nrq )`,
-		`\tnode task.js -e -q QTEST -c push -v "{\"a\":1}"`,
-		`\tnode task.js -e -q QTEST -c pull`,
+		`\nExamples: exec=(node nrq / nrq )`,
+		`\tnode nrq -e -q QTEST -c push -v "{\"a\":1}"`,
+		`\tnode nrq -e -q QTEST -c pull`,
 		`\tnrq -e -q QTEST -c len`,
 		`\tnrq -e -c status`,
 	].join('\n'));
@@ -294,6 +305,6 @@ try { (main => {
 	return T[options.cmd].apply(null, vars);
 })() } catch (ex) { console.log('EXECUTE_CATCH:', ex) }
 
-// node task.js -e -q QTEST -c push -v "{\"a\":1}"
-// node task.js -e -q QTEST -c pull
-// node task.js -e -c status
+// node nrq -e -q QTEST -c push -v "{\"a\":1}"
+// node nrq -e -q QTEST -c pull
+// node nrq -e -c status

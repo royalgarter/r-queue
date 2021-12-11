@@ -253,6 +253,7 @@ try { (main => {
 		.option('-q, --queue <queue>', 'Queue name')
 		.option('-p, --prefix <prefix>', 'Prefix name')
 		.option('-v, --var <var>', 'Rest variables according to command', (v, p) => p.concat([v]), [])
+		.option('-x, --xredis <xredis...>', 'Using raw redis cli command')
 
 	program.addHelpText('before', [
 		``,
@@ -271,19 +272,18 @@ try { (main => {
 		`\tnode nrq -e -q QTEST -c pull`,
 		`\tnrq -e -q QTEST -c len`,
 		`\tnrq -e -c status`,
+		`\tnrq -e -x set TestRedisKey "Hello World"`,
 	].join('\n'));
 
 	program.parse(process.argv);
 
 	const options = program.opts();
-
-	if (!~process.argv.indexOf('-e') && !~process.argv.indexOf('--execute')) return;
+	
 	T = __create(options.prefix ? {PREFIX: options.prefix} : undefined, options);
 
 	options.redis = options.redis || process.env.REDIS_URL;
 	
-	if (!options.redis) return console.log('Redis <-r> is missing');
-	if (!options.cmd) return console.log('Command <-c> is missing');
+	if (!options.redis) return console.log('Redis <-r> or REDIS_URL is missing');
 
 	const redisOpts = {
 		retry_unfulfilled_commands: true,
@@ -297,6 +297,12 @@ try { (main => {
 
 	const redis = require('redis').createClient(options.redis, redisOpts);
 	const _output = cmd => cmd || ((e,r) => console.log((options.debug ? `\n---\nCMD: ${options.cmd}\nERR: ${e}\nRESULT:\n` : '') + JSON.stringify(r, null, 2)) & redis.quit());
+
+	if (options.xredis) return redis[options.xredis.shift()]?.apply(redis, [...options.xredis, _output()]);
+
+	if (!~process.argv.indexOf('-e') && !~process.argv.indexOf('--execute')) return console.log('Using <-e> if you want to run on cli-mode');
+
+	if (!options.cmd) return console.log('Command <-c> is missing');
 
 	const vars = [redis, ...(~['status', 'wipe'].indexOf(options.cmd) ? [] : [_output(options.queue)]), ..._output(options.var), _output()];
 	options.debug && console.log(`VARS: ${options.cmd} ${vars.slice(1)}`);

@@ -82,7 +82,7 @@ const __create = (cfg, opt) => {
 
 		async.eachSeries(queues, 
 			(q, next) => T._pull(cli, q, false, (e, r) => next(r||e)), 
-		e => (typeof e == 'object' && !(e instanceof Error) && !e.stack) ? sure(cb)(null, e) : sure(cb)(e) );
+		e => (typeof e == 'object' && !(e instanceof Error) && !e?.stack) ? sure(cb)(null, e) : sure(cb)(e) );
 	}	
 
 	T.lpull = function(cli, q, t={times:30, interval:1e3}, cb){//  Long pulling from queue with retry option

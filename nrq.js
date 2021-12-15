@@ -250,7 +250,7 @@ try { (main => {
 		.option('-n, --enclosure', 'ENCLOSURE mode')
 		.option('-c, --cmd <cmd>', 'Command to execute')
 		.option('-r, --redis <redis>', 'Redis connection string')
-		.option('-q, --queue <queue>', 'Queue name')
+		.option('-q, --queue <queue>', 'Comma-separated queue name(s)')
 		.option('-p, --prefix <prefix>', 'Prefix name')
 		.option('-v, --var <var>', 'Rest variables according to command', (v, p) => p.concat([v]), [])
 		.option('-x, --xredis <xredis...>', 'Using raw redis cli command')
@@ -304,7 +304,12 @@ try { (main => {
 
 	if (!options.cmd) return console.log('Command <-c> is missing');
 
-	const vars = [redis, ...(~['status', 'wipe'].indexOf(options.cmd) ? [] : [_output(options.queue)]), ..._output(options.var), _output()];
+	const vars = [
+		redis, 
+		...(~['status', 'wipe'].indexOf(options.cmd) ? [] : _output(~options.queue?.indexOf(',') ? options.queue?.split(',') : options.queue)), 
+		..._output(options.var), 
+		_output()
+	];
 	options.debug && console.log(`VARS: ${options.cmd} ${vars.slice(1)}`);
 	
 	// console.log('vars', vars);

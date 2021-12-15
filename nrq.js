@@ -306,11 +306,11 @@ try { (main => {
 
 	const vars = [
 		redis, 
-		...(~['status', 'wipe'].indexOf(options.cmd) ? [] : _output(~options.queue?.indexOf(',') ? options.queue?.split(',') : options.queue)), 
+		...(~['status', 'wipe'].indexOf(options.cmd) ? [] : [_output(~options.queue?.indexOf(',') ? options.queue?.split(',') : options.queue)]), 
 		..._output(options.var), 
 		_output()
 	];
-	options.debug && console.log(`VARS: ${options.cmd} ${vars.slice(1)}`);
+	options.debug && console.log(`VARIABLES: ${options.cmd} ${vars.slice(1)}`);
 	
 	// console.log('vars', vars);
 	return T[options.cmd].apply(null, vars);

@@ -314,7 +314,7 @@ try { (main => {
 	
 	// console.log('vars', vars);
 	return T[options.cmd].apply(null, vars);
-})() } catch (ex) { console.log('EXECUTE_CATCH:', ex) }
+})() } catch (ex) { console.log('NRQ_CLI_CATCH:', ex, '\n'); process.exit(0); }
 
 // node nrq -e -q QTEST -c push -v "{\"a\":1}"
 // node nrq -e -q QTEST -c pull

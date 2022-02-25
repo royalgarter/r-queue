@@ -300,7 +300,7 @@ try { (main => {
 
 	if (options.xredis) return redis[options.xredis.shift()]?.apply(redis, [...options.xredis, _output()]);
 
-	if (!~process.argv.indexOf('-e') && !~process.argv.indexOf('--execute')) return console.log('Using <-e> if you want to run on cli-mode');
+	if (!~process.argv.indexOf('-e') && !~process.argv.indexOf('--execute')) return; //console.log('Using <-e> if you want to run on cli-mode');
 
 	if (!options.cmd) return console.log('Command <-c> is missing');
 

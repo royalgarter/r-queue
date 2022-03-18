@@ -167,13 +167,18 @@ const __create = (cfg, opt) => {
 		, e => next()), (e, r) => sure(cb)(e, isArray ? r : r[0]));
 	}
 
-	T.flush = function(cli, qs, cb){// Flush all tasks in specific queue (both WAIT & WORK)
+	T.apush = function(cli, qs, tsk, cb){// Lite push task to queue. The callback is returned with task id (_tid) >[ID, WAIT]
 		let {queues, isArray} = enqueue(qs);
-		
-		async.map(queues, (q, next) => async.parallel([
-			next => cli.del(sub(T.WAIT, q), next),
-			next => cli.del(sub(T.WORK, q), next),
-		], next), (e, r) => sure(cb)(e, isArray ? r : r[0]));
+		tsk = typeof tsk == 'string' ? tsk : tsk?.toString();
+
+		async.map(queues, 
+			(q, next) => cli.lpush(sub(T.WAIT, q), tsk, next), 
+			(e, r) => sure(cb)(e, tsk, isArray ? r : r[0])
+		); 
+	}
+
+	T.apull = function(cli, q, cb) {// Lite pulling task from WAIT queue and push to WORK queue
+		cli.rpoplpush(sub(T.WAIT, q), sub(T.WORK, q), sure(cb));
 	}
 
 	T.status = function(cli, cb){// Get status of every queues
@@ -185,6 +190,15 @@ const __create = (cfg, opt) => {
 				raw: k,
 			})), next),
 		], (e, r) => sure(cb)(e, r));
+	}
+
+	T.flush = function(cli, qs, cb){// Flush all tasks in specific queue (both WAIT & WORK)
+		let {queues, isArray} = enqueue(qs);
+		
+		async.map(queues, (q, next) => async.parallel([
+			next => cli.del(sub(T.WAIT, q), next),
+			next => cli.del(sub(T.WORK, q), next),
+		], next), (e, r) => sure(cb)(e, isArray ? r : r[0]));
 	}
 
 	T.wipe = function(cli, wildcard, cb){// Wipe all queues & data

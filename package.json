@@ -1,6 +1,6 @@
 {
   "name": "@royalgarter/r-queue",
-  "version": "2.2.7",
+  "version": "2.3.0",
   "description": "Simple Node.js Redis Task Queue",
   "main": "nrq.js",
   "bin": {
@@ -25,6 +25,6 @@
   "devDependencies": {
     "dotenv": "^9.0.0"
   },
-  "_id": "r-queue@2.2.7",
+  "_id": "r-queue@2.3.0",
   "_from": "r-queue@*"
 }

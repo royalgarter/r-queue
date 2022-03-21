@@ -6,9 +6,11 @@ const util = require('util');
 Object.assign(util.inspect.defaultOptions, {depth: 3, colors: process.env.HEROKU ? false : true, compact: true});
 
 const __create = (cfg, opt) => {
+	const init = key => cfg?.[key] || cfg?.options?.[key] || opt?.[key];
+
 	const T = { 
-		PREFIX: process.env.TASK_QUEUE_PREFIX || 'TSKQ',
-		TTL_SEC: 60*60*24*30,
+		PREFIX: init('prefix') || process.env.TASK_QUEUE_PREFIX || 'TSKQ',
+		TTL_SEC: init('ttl') || 60*60*24*30,
 		WAIT: 'WAIT',
 		WORK: 'WORK',
 		ENCLOSURE: false,
@@ -21,7 +23,7 @@ const __create = (cfg, opt) => {
 		},
 	};
 
-	const REDIS = cfg?.redis || cfg?.options?.redis || opt?.redis;
+	const REDIS = init('redis');
 
 	const _ = () => undefined;
 	const json = o => JSON.stringify(o, (k,v) => v instanceof require('redis').RedisClient ? v.address : v, 2);

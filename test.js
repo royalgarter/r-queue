@@ -3,7 +3,7 @@ const util = require('util');
 Object.assign(util.inspect.defaultOptions, {depth: 5, colors: process.env.HEROKU ? false : true, compact: true});
 const cli = require('redis').createClient(process.env.REDIS_URL);
 
-const T = require('./task.js').create({options: {enclosure: true, debug: true, unsafe: true, redis: cli}});
+const T = require('./nrq.js').create({options: {enclosure: true, debug: true, unsafe: true, redis: cli}});
 // const T = require('./task.js');
 let QUEUE = 'QTEST';
 let TESTCASE = process.argv.slice(2)[0];
@@ -11,11 +11,11 @@ let TESTCASE = process.argv.slice(2)[0];
 switch (TESTCASE) {
 	case 'listen': async.waterfall([
 		next => {
-			let resume = T.listen(QUEUE, {pause:true}, (e, r) => {
+			let resume = T.listen(QUEUE, {pause:true, visibility:10e3}, (e, r, tid) => {
 				if (e || !r) return;
 
-				console.log('pulled', r);
-				T.del(QUEUE, r._tid, (e,r) => console.log('del', e, r));
+				console.log('pulled', r, tid);
+				// T.del(QUEUE, r._tid, (e,r) => console.log('del', e, r));
 				resume?.();
 			});
 

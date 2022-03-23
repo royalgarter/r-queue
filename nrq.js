@@ -100,7 +100,7 @@ const __create = (cfg, opt) => {
 		return (() => stop = true);
 	};
 
-	T.listen = function(cli, q, o={keepAlive:true, interval:1e3, pause:false}, cb){// Listen on specific queue and callback whenever received a task
+	T.listen = function(cli, q, o={keepAlive:true, interval:1e3, pause:false, visibility:0}, cb){// Listen on specific queue and callback whenever received a task
 		let pointer = null;
 		let resume = () => pointer?.();
 
@@ -108,15 +108,24 @@ const __create = (cfg, opt) => {
 		o = {keepAlive:true, interval:1e3, pause:false, ...(typeof o === 'object' ? o : (cb || {}))};
 		
 		if (T.options.debug) console.log(' >Listened: ', o);
-		async.forever(next => (pointer = null) & T._pull(cli, q, false, (e, r) => {
+		async.forever(next => (pointer = null) & T._pull(cli, q, false, (e, r, tid) => {
 			if (e && !o?.keepAlive) return next(e);
 			if (r && o?.pause) pointer = next;
-			if (r) cb(e, r);
+			if (r) cb(e, r, tid);
+			T._visibility(cli, q, tid, o.visibility);
 			if (r && o?.pause) return;
 			setTimeout(next, o?.interval || 1e3);
 		}), e => sure(cb)(e));
 		return resume;
 	};
+
+	T._visibility = function(cli, q, tid, vis=0){
+		if (!vis) return;
+		setTimeout(() => async.waterfall([
+			next => cli.get(tid, next),
+			(flag, next) => flag ? T.reset(cli, q, tid, next) : next(),
+		], _), vis);
+	}
 
 	T.len = function(cli, qs, cb){// Get total tasks in queue >[WAIT, WORK]
 		let {queues, isArray} = enqueue(qs);
@@ -169,7 +178,7 @@ const __create = (cfg, opt) => {
 		, e => next()), (e, r) => sure(cb)(e, isArray ? r : r[0]));
 	}
 
-	T.apush = function(cli, qs, tsk, cb){// Lite push task to queue. The callback is returned with task id (_tid) >[ID, WAIT]
+	T.apush = function(cli, qs, tsk, cb){// Atomic push task to queue. The callback is returned with task id (_tid) >[ID, WAIT]
 		let {queues, isArray} = enqueue(qs);
 		tsk = typeof tsk == 'string' ? tsk : tsk?.toString();
 
@@ -179,7 +188,7 @@ const __create = (cfg, opt) => {
 		); 
 	}
 
-	T.apull = function(cli, q, cb) {// Lite pulling task from WAIT queue and push to WORK queue
+	T.apull = function(cli, q, cb) {// Atomic pulling task from WAIT queue and push to WORK queue
 		cli.rpoplpush(sub(T.WAIT, q), sub(T.WORK, q), sure(cb));
 	}
 
@@ -269,6 +278,7 @@ try { (main => {
 		.option('-q, --queue <queue>', 'Comma-separated queue name(s)')
 		.option('-p, --prefix <prefix>', 'Prefix name')
 		.option('-v, --var <var>', 'Rest variables according to command', (v, p) => p.concat([v]), [])
+		.option('-w, --pipevar', 'Append variable from pipeline shell | ')
 		.option('-x, --xredis <xredis...>', 'Using raw redis cli command')
 
 	program.addHelpText('before', [
@@ -320,16 +330,28 @@ try { (main => {
 
 	if (!options.cmd) return console.log('Command <-c> is missing');
 
-	const vars = [
+	const _buildVars = (options) => [
 		redis, 
 		...(~['status', 'wipe'].indexOf(options.cmd) ? [] : [_output(~options.queue?.indexOf(',') ? options.queue?.split(',') : options.queue)]), 
 		..._output(options.var), 
 		_output()
 	];
+
+	let vars = options.pipevar ? [] : _buildVars(options);
+
 	options.debug && console.log(`VARIABLES: ${options.cmd} ${vars.slice(1)}`);
-	
-	// console.log('vars', vars);
-	return T[options.cmd].apply(null, vars);
+
+	if (!options.pipevar) return T[options.cmd].apply(null, vars);
+
+	process.stdin.resume();
+	process.stdin.setEncoding('utf8');
+	process.stdin.on('data', data => {
+		options.var = [...options.var, data.toString().trim()];
+		vars = _buildVars(options);
+		return T[options.cmd].apply(null, vars);
+	});
+
+	return;
 })() } catch (ex) { console.log('NRQ_CLI_CATCH:', ex, '\n'); process.exit(0); }
 
 // node nrq -e -q QTEST -c push -v "{\"a\":1}"

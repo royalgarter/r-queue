@@ -322,7 +322,11 @@ try { (main => {
 	}
 
 	const redis = require('redis').createClient(options.redis, redisOpts);
-	const _output = cmd => cmd || ((e,r) => console.log((options.debug ? `\n---\nCMD: ${options.cmd}\nERR: ${e}\nRESULT:\n` : '') + JSON.stringify(r, null, 2)) & redis.quit());
+	const _output = cmd => cmd || (e, r) => {
+		console.log(options.debug ? `\n---\nCMD: ${options.cmd}\nERR: ${e}\nRESULT:\n` : ``
+					, JSON.stringify(r, null, 2).replace(/,(\s|\n|\r|\")+(\"|})/g,', $2'));
+		redis?.quit();
+	};
 
 	if (options.xredis) return redis[options.xredis.shift()]?.apply(redis, [...options.xredis, _output()]);
 

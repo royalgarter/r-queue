@@ -332,10 +332,10 @@ try { (main => {
 	redis.on('error', err => T.emit('error', err));
 	redis.on('connect', () => T.emit('connect'));
 
-	const _output = cmd => cmd || ((e, r) => {
+	const _output = cmd => cmd || ((e, r) => {debugger
 		console.log(
-			options.debug ? `\n---\nCMD: ${options.cmd}\nERR: ${e}\nRESULT:\n` : ``,
-			(JSON.stringify(r, null, 2) || '').replace(/,(\s|\n|\r|\")+(\"|})/g,', $2') );
+			options.debug ? `\n---\nCMD: ${options.cmd}\nERR: ${e}\nRESULT:\n` : ``
+			+ (JSON.stringify(r, null, 2) || '').replace(/,(\s|\n|\r|\")+(\"|})/g,', $2') );
 		redis?.quit();
 	});
 

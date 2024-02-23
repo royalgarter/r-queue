@@ -2,13 +2,19 @@
 
 const async = require('async');
 const crypto = require('crypto');
+const events = require('events');
 const util = require('util');
 Object.assign(util.inspect.defaultOptions, {depth: 3, colors: process.env.HEROKU ? false : true, compact: true});
 
 const __create = (cfg, opt) => {
 	const init = key => cfg?.[key] || cfg?.options?.[key] || opt?.[key];
+	const _emitter = new events.EventEmitter();
+	const T = {
+		emitter: _emitter,
+		emit: (ev, args) => _emitter.emit(ev, args),
+		on: (ev, cb) => _emitter.on(ev, cb),
+		removeAllListeners: (ev) => _emitter.removeAllListeners(ev),
 
-	const T = { 
 		PREFIX: init('prefix') || process.env.TASK_QUEUE_PREFIX || 'TSKQ',
 		TTL_SEC: init('ttl') || 60*60*24*30,
 		WAIT: 'WAIT',
@@ -313,6 +319,7 @@ try { (main => {
 
 	const redisOpts = {
 		retry_unfulfilled_commands: true,
+		connect_timeout: 10e3,
 		retry_strategy: opts => {
 			if (opts.error && opts.error.code === 'ECONNREFUSED') return new Error('The server refused the connection');
 			if (opts.total_retry_time > 1000 * 60 * 60) return new Error('Retry time exhausted');
@@ -322,11 +329,15 @@ try { (main => {
 	}
 
 	const redis = require('redis').createClient(options.redis, redisOpts);
-	const _output = cmd => cmd || (e, r) => {
-		console.log(options.debug ? `\n---\nCMD: ${options.cmd}\nERR: ${e}\nRESULT:\n` : ``
-					, JSON.stringify(r, null, 2).replace(/,(\s|\n|\r|\")+(\"|})/g,', $2'));
+	redis.on('error', err => T.emit('error', err));
+	redis.on('connect', () => T.emit('connect'));
+
+	const _output = cmd => cmd || ((e, r) => {
+		console.log(
+			options.debug ? `\n---\nCMD: ${options.cmd}\nERR: ${e}\nRESULT:\n` : ``,
+			(JSON.stringify(r, null, 2) || '').replace(/,(\s|\n|\r|\")+(\"|})/g,', $2') );
 		redis?.quit();
-	};
+	});
 
 	if (options.xredis) return redis[options.xredis.shift()]?.apply(redis, [...options.xredis, _output()]);
 

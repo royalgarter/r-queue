@@ -1,6 +1,8 @@
-# nrq: [N]ode.js [R]edis [Q]ueue. Work with CLI / required module / npx. Rebrand from [@royalgarter/r-queue]
+# nrq: [N]ode.js [R]edis [Q]ueue
 
-- [New homepage](https://www.npmjs.com/package/nrq)
+* Work with CLI / required module / npx
+* Rebrand from [@royalgarter/r-queue]
+* [New Homepage](https://www.npmjs.com/package/nrq)
 
 **NPX Mode. One-shot without Installing**
 
@@ -12,28 +14,28 @@ Details at CLI Mode with replacing "nrq" to "npx -y nrq"
 
     const redis = require('redis').createClient(process.env.REDIS_URL);
     const nrq = require('nrq').create({
-    	PREFIX: 'QAUTOBOT',
-    	ENCLOSURE: true,
-    
-    	options: { 
-    		redis,
-    		debug: true,
-    	}, 
+        PREFIX: 'QAUTOBOT',
+        ENCLOSURE: true,
+
+        options: {
+            redis,
+            debug: true,
+        },
     });
-    
+
     const QUEUE = 'JUST_A_QUEUE_NAME';
-    
+
     const event = new EventEmitter();
     const resume = nrq.listen(QUEUE, {keepAlive:true, pause: true}, (e, task) => {
-    	if (e) return event.emit('error', e);
-    
-    	event.emit('task', task);
+        if (e) return event.emit('error', e);
+
+        event.emit('task', task);
     });
-    
+
     event.on('error', console.log);
-    
+
     event.on('done', (task) => nrq.del(QUEUE, task._tid, (e, r) => console.log('task.deleted', e, r)));
-    
+
     nrq.push(QUEUE, {data: 'a simple data'}, (e, r) => console.log('pushed', e, r));
 
  - [See more](https://github.com/royalgarter/r-queue/blob/main/test.js)
@@ -41,7 +43,7 @@ Details at CLI Mode with replacing "nrq" to "npx -y nrq"
 **CLI Mode & Lazy Documentation**
 
     Usage: task [options]
-    
+
     Options:
       -e, --execute          Run as CLI-EXECUTE mode
       -d, --debug            DEBUG mode
@@ -52,7 +54,7 @@ Details at CLI Mode with replacing "nrq" to "npx -y nrq"
       -p, --prefix <prefix>  Prefix name
       -v, --var <var>        Rest variables according to command (default: [])
       -h, --help             display help for command
-    
+
     Commands (-c):
       * push:       (cli, qs, tsk, cb){// Push task to queue. The callback is returned with task id (_tid) >[ID, WAIT]
       * pull:       (cli, q, cb){// Standard pulling task from WAIT queue and push to WORK queue. The task should be deleted when finished
@@ -69,7 +71,7 @@ Details at CLI Mode with replacing "nrq" to "npx -y nrq"
       * flush:      (cli, qs, cb){// Flush all tasks in specific queue (both WAIT & WORK)
       * status:     (cli, cb){// Get status of every queues
       * wipe:       (cli, wildcard, cb){// Wipe all queues & data
-      
+
       * pushAsync:   fn(...args) { // return Promise
       * pullAsync:   fn(...args) { // return Promise
       * cpullAsync:  fn(...args) { // return Promise
@@ -83,7 +85,7 @@ Details at CLI Mode with replacing "nrq" to "npx -y nrq"
       * flushAsync:  fn(...args) { // return Promise
       * statusAsync: fn(...args) { // return Promise
       * wipeAsync:   fn(...args) { // return Promise
-	  * resetAsync:  fn(...args) { // return Promise
+      * resetAsync:  fn(...args) { // return Promise
       * resetAllAsync: fn(...args) { // return Promise
     
     Examples: exec=(node task.js / nrq )

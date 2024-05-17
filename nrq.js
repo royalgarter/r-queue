@@ -343,6 +343,9 @@ try { (main => {
 
 	if (!~process.argv.indexOf('-e') && !~process.argv.indexOf('--execute')) return; //console.log('Using <-e> if you want to run on cli-mode');
 
+	redis.removeAllListeners();
+	redis.on('error', e => { throw e; process.exit(1); });
+
 	if (!options.cmd) return console.log('Command <-c> is missing');
 
 	const _buildVars = (options) => [

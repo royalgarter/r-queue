@@ -1,18 +1,17 @@
 {
-  "name": "@royalgarter/r-queue",
-  "version": "2.4.4",
-  "description": "Simple Node.js Redis Task Queue",
+  "name": "nrq",
+  "version": "2.5.0",
+  "description": "[N]ode.js [R]edis [Q]ueue. Work with CLI / required module / npx",
   "main": "nrq.js",
   "bin": {
-    "nrq": "./nrq.js"
+    "nrq": "nrq.js"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/royalgarter/r-queue.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["redis", "queue", "task queue", "cli", "npx", "simple"],
+  "author": "https://github.com/royalgarter",
   "bugs": {
     "url": "https://github.com/royalgarter/r-queue/issues"
   },
@@ -25,6 +24,6 @@
   "devDependencies": {
     "dotenv": "^9.0.0"
   },
-  "_id": "r-queue@2.4.4",
-  "_from": "r-queue@*"
+  "_id": "nrq@2.5.0",
+  "_from": "nrq@*"
 }

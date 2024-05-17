@@ -1,6 +1,6 @@
 {
   "name": "nrq",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "description": "[N]ode.js [R]edis [Q]ueue. Work with CLI / required module / npx",
   "main": "nrq.js",
   "bin": {
@@ -24,6 +24,6 @@
   "devDependencies": {
     "dotenv": "^9.0.0"
   },
-  "_id": "nrq@2.5.0",
+  "_id": "nrq@2.5.1",
   "_from": "nrq@*"
 }

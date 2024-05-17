@@ -1,11 +1,17 @@
+# nrq: [N]ode.js [R]edis [Q]ueue. Work with CLI / required module / npx. Rebrand from [@royalgarter/r-queue]
 
-# r-queue
-Simple Redis Task Queue
+- [New homepage](https://www.npmjs.com/package/nrq)
 
-**NodeJS Mode**
+**NPX Mode. One-shot without Installing**
+
+Details at CLI Mode with replacing "nrq" to "npx -y nrq"
+
+    npx -y nrq --help
+
+**NodeJS Module**
 
     const redis = require('redis').createClient(process.env.REDIS_URL);
-    const nrq = require('@royalgarter/r-queue').create({
+    const nrq = require('nrq').create({
     	PREFIX: 'QAUTOBOT',
     	ENCLOSURE: true,
     
@@ -85,3 +91,4 @@ Simple Redis Task Queue
             node task.js -e -q QTEST -c pull
             nrq -e -q QTEST -c len
             nrq -e -c status
+
